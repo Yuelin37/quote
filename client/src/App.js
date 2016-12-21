@@ -3,46 +3,68 @@ import React, { Component } from 'react';
 import './App.css';
 import axios from 'axios';
 import Quote from './Quote';
+import { Button } from 'react-bootstrap';
 
 class App extends Component {
-  constructor(props) {
-    super(props);
+  componentWillMount() {
     this.state = {
-      quoteText: '...',
-      quoteAuthor: '...',
+      quotes: []
     };
   }
-  // componentDidMount() {
-  componentWillMount() {
-    this.fetchQuote();
-    // console.log(this.state);
+  nextId() {
+    this.uniqueId = this.uniqueId || 0;
+    return this.uniqueId++;
   }
-  fetchQuote = ()=>{
+  add(text) {
+    var newId = this.nextId();
+    var quotes = [
+      ...this.state.quotes,
+      {
+        id: newId,
+        quoteText: text,
+        quoteAuthor: 'new author...',
+        refreshQuote: this.refreshQuote
+      }
+    ];
+    this.setState({quotes});
+    this.refreshQuote(newId);
+  }
+  refreshQuote = (id) => {
+    this.fetchQuote(id);
+  };
+  fetchQuote = (id) => {
     axios.get('api/randomquote')
     .then(quote=>{
-      this.setState({
-        quoteText: quote.data.quoteText,
-        quoteAuthor: quote.data.quoteAuthor
-      });
+      if (typeof quote.data.quoteText === 'undefined'){
+        this.fetchQuote(id);
+      }else {
+        var quotes = [...this.state.quotes];
+        quotes[id].quoteText = quote.data.quoteText;
+        quotes[id].quoteAuthor = quote.data.quoteAuthor;
+        this.setState({quotes});
+      }
     })
     .catch(function (error) {
       console.log(error);
     });
+  };
+  eachQuote(quote) {
+    return (<Quote key={quote.id}
+                    id={quote.id}
+                    quoteText={quote.quoteText}
+                    quoteAuthor={quote.quoteAuthor}
+                    refreshQuote={quote.refreshQuote}
+                    >
+              </Quote>);
   }
+
+
   render() {
     return (
       <div className="App">
-        {/* A JSX comment
-        <div className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <h2>Welcome to React</h2>
-        </div>
-        <p className="App-intro">
-          To get started, edit <code>src/App.js</code> and save to reload.
-        </p>
-        */}
-        <Quote quoteText={this.state.quoteText} quoteAuthor={this.state.quoteAuthor}
-          fetchQuote={this.fetchQuote} />
+        {this.state.quotes.map(this.eachQuote)}
+
+        <Button bsStyle="primary" bsSize="large" onClick={()=>this.add('new quote')}>Add</Button>
       </div>
     );
   }
